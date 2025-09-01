@@ -16,7 +16,7 @@ USERS = {
     "admin": hash_password("admin")  # 👈 cifrada
 }
 
-# ========= Funciones de base de datos ========= #
+# ========= Funciones de reservas ========= #
 def cargar_reservas():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r") as f:
@@ -27,10 +27,12 @@ def guardar_reservas(reservas):
     with open(DB_FILE, "w") as f:
         json.dump(reservas, f, indent=4)
 
+# ========= Funciones de eventos ========= #
 def cargar_eventos():
     if os.path.exists(EVENTS_FILE):
         with open(EVENTS_FILE, "r") as f:
             return json.load(f)
+    # Valores iniciales
     return ["Concierto de Rock", "Obra de Teatro", "Festival de Cine", "Conferencia", "Karaoke Cup"]
 
 def guardar_eventos(eventos):
@@ -71,14 +73,20 @@ def logout():
 # ========= App ========= #
 st.title("🎟️ Sistema de Reservas de Entradas")
 
-# Formulario de reservas
 with st.container():
     st.markdown("## 📌 Haz tu Reserva")
     nombre = st.text_input("👤 Nombre completo")
-    evento = st.selectbox("🎭 Selecciona un evento", st.session_state["eventos"])
-    cantidad = st.number_input("🎫 Cantidad de entradas", min_value=1, step=1)
 
-    if st.button("✅ Reservar", use_container_width=True):
+    # Si no hay eventos disponibles
+    if len(st.session_state["eventos"]) == 0:
+        evento = st.selectbox("🎭 Selecciona un evento", ["No hay eventos disponibles"], index=0, disabled=True)
+        reservar_btn = st.button("✅ Reservar", disabled=True, use_container_width=True)
+    else:
+        evento = st.selectbox("🎭 Selecciona un evento", st.session_state["eventos"])
+        cantidad = st.number_input("🎫 Cantidad de entradas", min_value=1, step=1)
+        reservar_btn = st.button("✅ Reservar", use_container_width=True)
+
+    if reservar_btn:
         if nombre.strip() == "":
             st.warning("⚠️ Ingresa tu nombre antes de reservar.")
         else:
@@ -89,15 +97,15 @@ with st.container():
 
 st.divider()
 
-# ========= Zona de admin ========= #
+# ========= Panel Admin ========= #
 if st.session_state["logged_in"]:
     st.markdown("## 👑 Panel de Administrador")
 
-    # Mostrar reservas
+    # Lista de reservas
+    st.subheader("📋 Reservas registradas")
     if len(st.session_state["reservas"]) > 0:
-        st.subheader("📋 Lista de Reservas")
-        for i, r in enumerate(st.session_state["reservas"]):
-            st.write(f"**{i+1}.** {r['nombre']} - {r['evento']} ({r['cantidad']} entradas)")
+        for i, reserva in enumerate(st.session_state["reservas"]):
+            st.write(f"{i+1}. **{reserva['nombre']}** - {reserva['evento']} - {reserva['cantidad']} entradas")
             if st.button(f"🗑️ Eliminar {i+1}", key=f"del_{i}"):
                 st.session_state["reservas"].pop(i)
                 guardar_reservas(st.session_state["reservas"])
@@ -108,33 +116,27 @@ if st.session_state["logged_in"]:
     st.divider()
 
     # Gestión de eventos
-    st.subheader("🎭 Gestión de Eventos")
-    st.write("Eventos actuales:", ", ".join(st.session_state["eventos"]))
-
+    st.subheader("🎭 Gestión de eventos")
     nuevo_evento = st.text_input("➕ Añadir nuevo evento")
-    if st.button("Añadir Evento"):
+    if st.button("Agregar evento", use_container_width=True):
         if nuevo_evento.strip() != "":
             st.session_state["eventos"].append(nuevo_evento.strip())
             guardar_eventos(st.session_state["eventos"])
-            st.success(f"Evento '{nuevo_evento}' añadido.")
+            st.success(f"Evento '{nuevo_evento}' añadido con éxito")
             st.rerun()
 
-    evento_borrar = st.selectbox("🗑️ Eliminar un evento", st.session_state["eventos"])
-    if st.button("Eliminar Evento"):
-        if evento_borrar in st.session_state["eventos"]:
-            st.session_state["eventos"].remove(evento_borrar)
-            guardar_eventos(st.session_state["eventos"])
-            st.warning(f"Evento '{evento_borrar}' eliminado.")
-            st.rerun()
-
-    if st.button("🔄 Resetear eventos por defecto"):
-        st.session_state["eventos"] = ["Concierto de Rock", "Obra de Teatro", "Festival de Cine", "Conferencia", "Karaoke Cup"]
-        guardar_eventos(st.session_state["eventos"])
-        st.success("Eventos reseteados.")
-        st.rerun()
+    if len(st.session_state["eventos"]) > 0:
+        st.markdown("### Eventos actuales:")
+        for i, ev in enumerate(st.session_state["eventos"]):
+            st.write(f"- {ev}")
+            if st.button(f"🗑️ Eliminar evento {i+1}", key=f"ev_{i}"):
+                st.session_state["eventos"].pop(i)
+                guardar_eventos(st.session_state["eventos"])
+                st.rerun()
+    else:
+        st.info("📭 No hay eventos disponibles. Añade alguno para habilitar reservas.")
 
     st.divider()
     logout()
-
 else:
     login()
