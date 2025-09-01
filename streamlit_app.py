@@ -1,15 +1,13 @@
 import streamlit as st
 import hashlib
 
-# Función para cifrar contraseña
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Guardamos usuario y contraseña hasheada
+# Usuario fijo y contraseña hasheada
 ADMIN_USER = "admin"
-ADMIN_PASS_HASH = hash_password("admin")  # La clave es "admin", pero guardada en hash
+ADMIN_PASS_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
 
-# Recuperar reservas de sesión
 reservas = st.session_state.get("reservas", [])
 
 st.title("🎟️ Reservas de Entradas - NM GAMES")
@@ -18,7 +16,6 @@ eventos = ["Concierto de Rock", "Obra de Teatro", "Karaoke Cup", "Festival de He
 
 st.header("Haz tu Reserva")
 
-# Formulario de reserva
 with st.form("reserva_form"):
     nombre = st.text_input("👤 Tu nombre")
     evento = st.selectbox("📅 Selecciona el evento", eventos)
@@ -34,7 +31,7 @@ with st.form("reserva_form"):
             st.session_state["reservas"] = reservas
             st.success(f"✅ ¡Reserva confirmada para {nombre}! ({cantidad} entrada(s) a {evento})")
 
-# Sección de administrador
+# Login de administrador
 st.sidebar.header("🔐 Panel de Administrador")
 usuario = st.sidebar.text_input("Usuario")
 clave = st.sidebar.text_input("Contraseña", type="password")
