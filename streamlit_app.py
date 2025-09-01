@@ -4,7 +4,7 @@ import streamlit as st
 st.title("🎟️ Reservas de Entradas - NM GAMES")
 
 # Eventos disponibles
-eventos = ["Concierto de Rock", "Obra de Teatro", "Karaoke Cup", "Festival de Helados"]
+eventos = ["No hay eventos disponibles"]
 reservas = st.session_state.get("reservas", [])
 
 st.header("Haz tu Reserva")
