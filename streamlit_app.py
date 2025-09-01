@@ -27,7 +27,8 @@ st.header("📅 Haz tu Reserva")
 
 with st.form("reserva_form", clear_on_submit=True):
     nombre = st.text_input("👤 Tu nombre")
-    evento = st.selectbox("🎭 Selecciona el evento", ["Concierto de Rock", "Obra de Teatro", "Karaoke Cup", "Festival de Helados"])
+    eventos = ["No hay eventos disponibles"]
+    evento = st.selectbox("🎭 Selecciona el evento", eventos)
     cantidad = st.number_input("🎫 Número de entradas", min_value=1, max_value=10, value=1)
     confirmar = st.form_submit_button("✅ Confirmar Reserva")
 
