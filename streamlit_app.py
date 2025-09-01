@@ -1,72 +1,80 @@
 import streamlit as st
 import hashlib
+import json
+import os
 
-# ------------------- Seguridad -------------------
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+# ---------- CONFIGURACIÓN ----------
+DB_FILE = "reservas.json"
 
-# Usuario y clave hasheada (la clave real es "admin", pero aquí solo se guarda el hash)
-ADMIN_USER = "admin"
-ADMIN_PASS_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+# Usuario y contraseña cifrados
+USUARIO_ADMIN = hashlib.sha256("admin".encode()).hexdigest()
+CLAVE_ADMIN = hashlib.sha256("admin".encode()).hexdigest()
 
-# Inicializar variables de sesión
+# ---------- FUNCIONES ----------
+def cargar_reservas():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def guardar_reservas(reservas):
+    with open(DB_FILE, "w") as f:
+        json.dump(reservas, f, indent=4)
+
+def verificar_login(usuario, clave):
+    return (hashlib.sha256(usuario.encode()).hexdigest() == USUARIO_ADMIN and
+            hashlib.sha256(clave.encode()).hexdigest() == CLAVE_ADMIN)
+
+# ---------- INICIO ----------
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+
 if "reservas" not in st.session_state:
-    st.session_state["reservas"] = []
+    st.session_state["reservas"] = cargar_reservas()
 
-if "is_admin" not in st.session_state:
-    st.session_state["is_admin"] = False
+# ---------- INTERFAZ ----------
+st.title("🎟️ Sistema de Reservas de Eventos")
 
-# ------------------- UI -------------------
-st.set_page_config(page_title="Reservas NM GAMES", page_icon="🎟️", layout="centered")
+menu = st.sidebar.radio("Navegación", ["Hacer Reserva", "Admin"])
 
-st.title("🎉 Reservas de Entradas - NM GAMES")
-st.markdown("Bienvenido 👋 Reserva tus entradas para nuestros eventos de forma fácil y rápida.")
+# ---------- HACER RESERVA ----------
+if menu == "Hacer Reserva":
+    st.subheader("Reserva tu entrada 🎫")
 
-# ------------------- Formulario de reservas -------------------
-st.header("📅 Haz tu Reserva")
+    nombre = st.text_input("Nombre completo")
+    evento = st.text_input("Evento")
+    cantidad = st.number_input("Cantidad de entradas", min_value=1, step=1)
 
-with st.form("reserva_form", clear_on_submit=True):
-    nombre = st.text_input("👤 Tu nombre")
-    eventos = ["No hay eventos disponibles"]
-    evento = st.selectbox("🎭 Selecciona el evento", eventos)
-    cantidad = st.number_input("🎫 Número de entradas", min_value=1, max_value=10, value=1)
-    confirmar = st.form_submit_button("✅ Confirmar Reserva")
-
-    if confirmar:
-        if nombre.strip() == "":
-            st.warning("⚠️ Por favor ingresa tu nombre.")
-        else:
+    if st.button("Reservar"):
+        if nombre and evento and cantidad:
             reserva = {"nombre": nombre, "evento": evento, "cantidad": cantidad}
             st.session_state["reservas"].append(reserva)
-            st.success(f"🎉 ¡Reserva confirmada para **{nombre}**! ({cantidad} entrada(s) a {evento})")
-
-st.markdown("---")
-
-# ------------------- Panel Admin -------------------
-st.sidebar.header("🔐 Panel de Administrador")
-
-if not st.session_state["is_admin"]:
-    usuario = st.sidebar.text_input("👤 Usuario")
-    clave = st.sidebar.text_input("🔑 Contraseña", type="password")
-
-    if st.sidebar.button("Iniciar sesión"):
-        if usuario == ADMIN_USER and hash_password(clave) == ADMIN_PASS_HASH:
-            st.session_state["is_admin"] = True
-            st.sidebar.success("✅ Acceso concedido")
+            guardar_reservas(st.session_state["reservas"])
+            st.success("✅ ¡Reserva realizada con éxito!")
         else:
-            st.sidebar.error("❌ Usuario o contraseña incorrectos")
+            st.error("⚠️ Por favor completa todos los campos.")
 
-else:
-    st.sidebar.success("✅ Sesión iniciada como Admin")
-    if st.sidebar.button("🚪 Cerrar sesión"):
-        st.session_state["is_admin"] = False
+# ---------- ADMINISTRACIÓN ----------
+elif menu == "Admin":
+    if not st.session_state["logged_in"]:
+        st.subheader("🔑 Iniciar sesión como administrador")
+        usuario = st.text_input("Usuario")
+        clave = st.text_input("Contraseña", type="password")
 
-# ------------------- Lista de reservas (solo admin) -------------------
-if st.session_state["is_admin"]:
-    st.header("📋 Lista de Reservas (Solo Admin)")
-
-    if st.session_state["reservas"]:
-        for i, r in enumerate(st.session_state["reservas"], start=1):
-            st.write(f"**{i}. {r['nombre']}** → 🎫 {r['cantidad']} entrada(s) para *{r['evento']}*")
+        if st.button("Ingresar"):
+            if verificar_login(usuario, clave):
+                st.session_state["logged_in"] = True
+                st.success("✅ Sesión iniciada correctamente")
+            else:
+                st.error("❌ Usuario o contraseña incorrectos")
     else:
-        st.info("ℹ️ Aún no hay reservas registradas.")
+        st.subheader("📋 Lista de Reservas")
+        if st.session_state["reservas"]:
+            for i, reserva in enumerate(st.session_state["reservas"], 1):
+                st.write(f"{i}. {reserva['nombre']} - {reserva['evento']} - {reserva['cantidad']} entradas")
+        else:
+            st.info("Aún no hay reservas registradas.")
+
+        if st.button("Cerrar sesión"):
+            st.session_state["logged_in"] = False
+            st.success("🔒 Sesión cerrada correctamente")
